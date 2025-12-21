@@ -1,1 +1,0 @@
-https://cdn.zoom.us/prod/6.7.0.6313/zoom_amd64.deb
