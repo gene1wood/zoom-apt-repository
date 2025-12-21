@@ -1,0 +1,174 @@
+name: Fetch Zoom DEB package and create apt repo
+
+on:
+  schedule:
+    - cron: "0 3 27 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  URL_FILE: zoom-url.txt
+  DEB_FILE: zoom_amd64.deb
+  ZOOM_DOWNLOAD_URL: https://zoom.us/client/latest/zoom_amd64.deb
+
+jobs:
+  check-for-updates:
+    name: Check for new Zoom version
+    runs-on: ubuntu-latest
+    outputs:
+      has-update: ${{ steps.detect.outputs.has-update }}
+      download-url: ${{ steps.detect.outputs.download-url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Detect new version
+        id: detect
+        run: |
+          set -xe
+          
+          # Follow redirects to get the actual download URL
+          NEW_URL=$(curl \
+            --head \
+            --location \
+            --no-progress-meter \
+            --write-out '%{url_effective}\n' \
+            --output /dev/null \
+            "$ZOOM_DOWNLOAD_URL")
+          
+          # Check if URL has changed
+          if [ -e "$URL_FILE" ] && [ "$NEW_URL" = "$(cat "$URL_FILE")" ]; then
+            echo "No new version detected"
+            echo "has-update=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          echo "New version detected: $NEW_URL"
+          echo "$NEW_URL" > "$URL_FILE"
+          
+          # Download the new package
+          curl \
+            --no-progress-meter \
+            --output "$DEB_FILE" \
+            "$NEW_URL"
+          
+          echo "has-update=true" >> "$GITHUB_OUTPUT"
+          echo "download-url=$NEW_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Upload DEB package as artifact
+        if: steps.detect.outputs.has-update == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: zoom-package
+          retention-days: 1
+          path: |
+            ${{ env.DEB_FILE }}
+            ${{ env.URL_FILE }}
+
+  build-apt-repository:
+    name: Build and sign APT repository
+    needs: check-for-updates
+    if: needs.check-for-updates.outputs.has-update == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download DEB package
+        uses: actions/download-artifact@v7
+        with:
+          name: zoom-package
+
+      - name: Install required tools
+        run: sudo apt-get update && sudo apt-get install -y apt-utils gnupg
+
+      - name: Import GPG signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.ZOOM_APT_GPG_PRIVATE_KEY }}
+        run: echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Extract GPG key ID and export public key
+        id: gpg
+        run: |
+          set -xe
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '$1=="fpr"{print $10; exit}')
+          echo "key-id=$KEY_ID" >> "$GITHUB_OUTPUT"
+          
+          # Export public key for users to import
+          mkdir -p public
+          gpg --armor --export "$KEY_ID" > public/github-actions-zoom-apt.asc
+
+      - name: Create APT repository structure
+        env:
+          KEY_ID: ${{ steps.gpg.outputs.key-id }}
+        run: |
+          set -xe
+          
+          # Create directory structure
+          mkdir -p public/pool/main
+          mkdir -p public/dists/stable/main/binary-amd64
+          
+          # Move DEB package to pool
+          mv -v "$DEB_FILE" public/pool/main/
+          
+          cd public
+          
+          # Generate package index
+          apt-ftparchive packages pool > dists/stable/main/binary-amd64/Packages
+          gzip --keep --force dists/stable/main/binary-amd64/Packages
+          
+          # Generate repository metadata
+          cat > ../aptftp.conf <<EOF
+          APT::FTPArchive::Release {
+            Origin "$GITHUB_REPOSITORY_OWNER";
+            Label "$GITHUB_REPOSITORY_OWNER GitHub Actions Zoom Repository";
+            Suite "stable";
+            Codename "bionic";
+            Architectures "amd64";
+            Components "main";
+            Description "Automated Zoom package repository";
+          };
+          EOF
+          
+          apt-ftparchive release -c=../aptftp.conf dists/stable > dists/stable/Release
+          
+          # Sign the Release file (inline signature)
+          gpg --batch --yes --default-key "$KEY_ID" \
+            --clearsign \
+            --output dists/stable/InRelease \
+            dists/stable/Release
+          
+          # Sign the Release file (detached signature for legacy support)
+          gpg --batch --yes --default-key "$KEY_ID" \
+            --armor --detach-sign \
+            --output dists/stable/Release.gpg \
+            dists/stable/Release
+
+      - name: Upload repository for GitHub Pages
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+
+      - name: Commit URL change to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$URL_FILE"
+          git commit -m "Update Zoom download URL to $(cat $URL_FILE)"
+          git push
+
+  deploy-to-github-pages:
+    name: Deploy repository to GitHub Pages
+    needs: build-apt-repository
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
