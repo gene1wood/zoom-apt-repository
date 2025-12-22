@@ -2,7 +2,7 @@ name: Fetch Zoom DEB package and create apt repo
 
 on:
   schedule:
-    - cron: "0 3 27 * *"
+    - cron: "27 3 * * *"
   workflow_dispatch:
 
 permissions:
