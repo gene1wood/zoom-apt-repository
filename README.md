@@ -25,7 +25,7 @@ by controlling their own GPG signing keys.
 
 ## Architecture Support
 
-AMD64 (x86_64) only. Zoom only provides 64-bit x86 package.
+AMD64 (x86_64) only. Zoom only provides a 64-bit x86 package.
 ARM and 32-bit systems are not supported.
 
 ## Prerequisites
@@ -216,13 +216,12 @@ maintain their own secure package source.
 Zoom's CDN appears to be misconfigured for ETag-based caching. When sending a
 valid ETag, the server returns HTTP 200 with the full file instead of HTTP 304
 (Not Modified), making ETag-based update detection ineffective. See
-[this analysis]
-(https://gist.github.com/gene1wood/5249118ad566eb349f4b85da2f8c9e8f) for more
-information.
+[this analysis](https://gist.github.com/gene1wood/5249118ad566eb349f4b85da2f8c9e8f)
+for more information.
 
 ### How much does this cost?
 
-Nothing! GitHub provides free:
+Nothing. GitHub provides free:
 - Repository hosting
 - GitHub Actions (2,000 minutes/month for free accounts)
 - GitHub Pages hosting
