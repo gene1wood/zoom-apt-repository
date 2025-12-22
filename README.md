@@ -38,9 +38,8 @@ ARM and 32-bit systems are not supported.
 
 ### 1. Fork this Repository
 
-[Click here to fork this upstream repository]
-(https://github.com/gene1wood/zoom-apt-repository/fork) to your own GitHub
-account.
+[Click here to fork this upstream repository](https://github.com/gene1wood/zoom-apt-repository/fork)
+to your own GitHub account.
 
 ### 2. Enable GitHub Pages
 
@@ -111,8 +110,7 @@ sudo curl --location --output /etc/apt/keyrings/github-actions-zoom-apt.asc \
   "https://$YOUR_GITHUB_USERNAME.github.io/zoom-apt-repository/github-actions-zoom-apt.asc"
 
 # Add the APT repository source
-echo "deb
-[signed-by=/etc/apt/keyrings/github-actions-zoom-apt.asc arch=amd64] " \
+echo "deb [signed-by=/etc/apt/keyrings/github-actions-zoom-apt.asc arch=amd64] " \
   "https://$YOUR_GITHUB_USERNAME.github.io/zoom-apt-repository stable main" \
   | sudo tee /etc/apt/sources.list.d/github-actions-zoom.list
 
