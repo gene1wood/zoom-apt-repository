@@ -10,9 +10,9 @@ new `.deb` packages. This project automatically mirrors the latest Zoom package
 and serves it as a proper APT repository, enabling automatic updates through
 your standard package manager.
 
-**Important:** This repository is designed to be forked. Each user maintains
-  their own copy to avoid bandwidth and storage costs, and to maintain security
-  by controlling their own GPG signing keys.
+This repository is designed to be forked. Each user maintains
+their own copy to avoid bandwidth and storage costs, and to maintain security
+by controlling their own GPG signing keys.
 
 ## Features
 
@@ -25,8 +25,8 @@ your standard package manager.
 
 ## Architecture Support
 
-**AMD64 (x86_64) only.** Zoom only provides 64-bit x86 package.
-  ARM and 32-bit systems are not supported.
+AMD64 (x86_64) only. Zoom only provides 64-bit x86 package.
+ARM and 32-bit systems are not supported.
 
 ## Prerequisites
 
@@ -86,9 +86,10 @@ Copy the entire output into your clipboard, including the
 
 You have two options:
 
-**Option A - Wait:** The GitHub Action runs automatically every night.
+Option A - Wait: The GitHub Action runs automatically every night.
 
-**Option B - Manual trigger:**
+Option B - Manual trigger:
+
 1. Go to the `Actions` tab in your repository
 2. Select `Fetch Zoom DEB package and create apt repo`
 3. Click the `Run workflow` dropdown
@@ -129,14 +130,17 @@ sudo apt install zoom
 zoom --version
 
 # Verify updates will come from your repository
-apt policy zoom ```
+apt policy zoom
+```
 
 ## Keeping Zoom Updated
 
 Once configured, Zoom will automatically update with your regular system
 updates:
 
-```bash sudo apt update && sudo apt upgrade```
+```bash
+sudo apt update && sudo apt upgrade
+```
 
 The GitHub Action checks for new Zoom versions nightly, so your repository will
 typically have the latest version within 24 hours of Zoom releasing an update.
@@ -163,19 +167,18 @@ sudo apt update
 
 When you fork this repository and generate your own GPG key, you are:
 
-- **Trusting:** Zoom's official download server (where the package
+- Trusting: Zoom's official download server (where the package
   originates)
-- **Trusting:** Your own GitHub account security and GPG key management
-- **Trusting:** The code in your forked repository (which you can audit)
-- **NOT trusting:** The upstream `gene1wood/zoom-apt-repository` maintainer to
+- Trusting: Your own GitHub account security and GPG key management
+- Trusting: The code in your forked repository (which you can audit)
+- NOT trusting: The upstream `gene1wood/zoom-apt-repository` maintainer to
   sign your packages
 
 This setup gives you control over the entire supply chain from Zoom's servers to
 your systems.
 
-### Best Practices
-
-- **Audit the code** in your fork, especially the GitHub Action workflow
+It's a good practice to audit the code in your fork, especially the GitHub
+Action workflow
 
 ## FAQ
 
@@ -236,7 +239,8 @@ https://github.com/gene1wood/zoom-apt-repository
 ## License
 
 This project is provided under the [GPLv3 GNU General Public License](LICENSE.txt)
+
 ---
 
-**Note:** This is an unofficial tool and is not affiliated with, endorsed by, or
-  supported by Zoom Video Communications, Inc.
+This is an unofficial tool and is not affiliated with, endorsed by, or
+supported by Zoom Video Communications, Inc.
