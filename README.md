@@ -2,7 +2,69 @@
 
 [![Fetch Zoom DEB package and create apt repo](https://github.com/gene1wood/zoom-apt-repository/actions/workflows/create-apt-repo.yml/badge.svg)](https://github.com/gene1wood/zoom-apt-repository/actions/workflows/create-apt-repo.yml)
 
-## What is this?
+## Why is this repo archived?
+
+This repo, which uses GitHub Actions and GitHub pages to maintain a remote
+APT repo in GitHub with the most recent Zoom `.deb` pacakge, works, however
+there is an easier way to accomplish this without relying on any remote APT
+repo.
+
+Instead, you can use the [`APT::Update::Pre-Invoke`](https://manpages.debian.org/stretch/apt/apt.conf.5.en.html#HOW_APT_CALLS_DPKG(1))
+feature in `apt.conf` to instruct `apt` to check for an updated Zoom `.deb`
+file and fetch it if needed. This solution is simpler as it only requires a
+local file and removes GitHub Actions and GitHub Pages from the picture.
+
+To enable this simpler approach, copy paste the code below into a file and run
+it once. The code will
+
+* Create a new `/usr/local/zoom-deb-files` directory to contain the Zoom `.deb`
+  file and the APT repo files (`Packages` and `Release`)
+* Create the new `/etc/apt/apt.conf.d/99update_zoom` file. This file instructs
+  `apt` to check for a newer file hosted on Zoom's CDN, each time you run 
+  `apt update`, and if one is present, download it and rebuild the local APT
+  repo.
+* Create the `/etc/apt/sources.list.d/local-zoom.list` file to instruct `apt`
+  to use this new local APT repo
+
+```shell
+#!/usr/bin/env bash
+
+# Based on https://askubuntu.com/a/1316231/14601
+
+url=https://zoom.us/client/latest/zoom_amd64.deb
+debdir=/usr/local/zoom-deb-files
+aptconf=/etc/apt/apt.conf.d/99update_zoom
+sourcelist=/etc/apt/sources.list.d/local-zoom.list
+
+sudo mkdir -p $debdir
+# --timestamping only fetches the file if the last-modified HTTP header in the
+#   response is newer than the last modified time of the local file
+# --no-if-modified-since tells wget to send a HEAD request to determine if
+#   there's a new file or not before sending a GET request
+# The grep prevents running apt-ftparchive if no new file was downloaded
+echo 'APT::Update::Pre-Invoke ' \
+'{"cd '$debdir' ' \
+'&& wget --timestamping --no-if-modified-since '$url' 2>&1 ' \
+'| ( grep --quiet ' "'Server file no newer than local file'" ' && exit 1 || exit 0 ) ' \
+'&& apt-ftparchive packages . > Packages ' \
+'&& apt-ftparchive release . > Release ' \
+'|| true";};' | sudo tee $aptconf
+echo 'deb [trusted=yes lang=none] file:'$debdir' ./' | sudo tee $sourcelist
+```
+
+Once this is done, you can run this to install Zoom
+
+```shell
+sudo apt update
+sudo apt install zoom
+```
+
+# Deprecated Instructions
+
+Below is the original README that gives details about the now deprecated
+GitHub Actions and GitHub Pages method.
+
+## What is this repo?
 
 Zoom doesn't provide an official APT repository, which means keeping Zoom
 updated on Debian/Ubuntu systems requires manually downloading and installing
